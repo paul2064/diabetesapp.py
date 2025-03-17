@@ -14,7 +14,7 @@ from io import StringIO
 # Load dataset with error handling
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/paul/diabetesapp/main/diabetesdataset.csv"
+    url = "https://raw.githubusercontent.com/paul2064/diabetesapp.py/main/diabetesdataset.csv"
     try:
         response = requests.get(url)
         response.raise_for_status()  # Raise error for HTTP failures
