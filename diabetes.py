@@ -8,19 +8,29 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
+import requests
+from io import StringIO
 
-# Load dataset
+# Load dataset with error handling
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/paul/diabetesapp.py/main/diabetesdataset.csv"
-    return pd.read_csv(url)
+    url = "https://raw.githubusercontent.com/paul/diabetesapp/main/diabetesdataset.csv"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # Raise error for HTTP failures
+        return pd.read_csv(StringIO(response.text))
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to load dataset: {e}")
+        return None
 
 # Preprocess data
 def preprocess_data(df):
-    X = df.drop(columns=['Id', 'Outcome'])  # Drop unnecessary columns
+    if 'Id' in df.columns:
+        df = df.drop(columns=['Id'])  # Drop 'Id' column if it exists
+    X = df.drop(columns=['Outcome'])
     y = df['Outcome']
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)  # Standardize numerical features
+    X_scaled = scaler.fit_transform(X)
     return X_scaled, y, scaler, X.columns
 
 # Train model fresh every time
@@ -43,7 +53,6 @@ def train_model(X, y, model_type):
     model.fit(X_train, y_train)
     y_pred = model.predict(X_test)
 
-    # Evaluate performance
     accuracy = accuracy_score(y_test, y_pred)
     report = classification_report(y_test, y_pred, output_dict=True)
 
@@ -56,51 +65,52 @@ st.sidebar.header("🔢 Input Patient Details")
 
 # Load and preprocess data
 data = load_data()
-X, y, scaler, feature_names = preprocess_data(data)
+if data is not None:
+    X, y, scaler, feature_names = preprocess_data(data)
 
-# Select Model
-model_type = st.sidebar.selectbox("Select Model", ["Random Forest", "Neural Network (MLP)"])
+    # Select Model
+    model_type = st.sidebar.selectbox("Select Model", ["Random Forest", "Neural Network (MLP)"])
 
-# Train model fresh every time
-model, accuracy, report, X_train = train_model(X, y, model_type)
+    # Train model fresh every time
+    model, accuracy, report, X_train = train_model(X, y, model_type)
 
-# Display model performance
-st.subheader("📊 Model Performance")
-st.write(f"**Accuracy:** {accuracy:.2f}")
+    # Display model performance
+    st.subheader("📊 Model Performance")
+    st.write(f"**Accuracy:** {accuracy:.2f}")
 
-# Toggle to show/hide classification report
-if st.checkbox("Show Classification Report"):
-    st.json(report)  # Show metrics only when checked
+    # Toggle to show/hide classification report
+    if st.checkbox("Show Classification Report"):
+        st.json(report)
 
-# Feature Importance (Only for Random Forest)
-if model_type == "Random Forest":
-    st.subheader("🔍 Feature Importance")
-    feature_importances = model.feature_importances_
-    feature_importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': feature_importances})
-    feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
+    # Feature Importance (Only for Random Forest)
+    if model_type == "Random Forest":
+        st.subheader("🔍 Feature Importance")
+        feature_importances = model.feature_importances_
+        feature_importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': feature_importances})
+        feature_importance_df = feature_importance_df.sort_values(by='Importance', ascending=False)
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(y=feature_importance_df['Feature'], x=feature_importance_df['Importance'], palette="viridis", ax=ax)
-    ax.set_xlabel("Importance", fontsize=12)
-    ax.set_ylabel("Feature", fontsize=12)
-    ax.set_title("Feature Importance", fontsize=14, fontweight='bold')
-    ax.tick_params(axis='both', labelsize=10)
-    st.pyplot(fig)
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.barplot(y=feature_importance_df['Feature'], x=feature_importance_df['Importance'], palette="viridis", ax=ax)
+        ax.set_xlabel("Importance", fontsize=12)
+        ax.set_ylabel("Feature", fontsize=12)
+        ax.set_title("Feature Importance", fontsize=14, fontweight='bold')
+        ax.tick_params(axis='both', labelsize=10)
+        st.pyplot(fig)
 
-# Sidebar User Input
-pregnancies = st.sidebar.number_input("Pregnancies", min_value=0, max_value=20, value=1)
-glucose = st.sidebar.number_input("Glucose Level", min_value=0, max_value=200, value=100)
-bp = st.sidebar.number_input("Blood Pressure", min_value=0, max_value=150, value=70)
-skin = st.sidebar.number_input("Skin Thickness", min_value=0, max_value=100, value=20)
-insulin = st.sidebar.number_input("Insulin Level", min_value=0, max_value=500, value=80)
-bmi = st.sidebar.number_input("BMI", min_value=0.0, max_value=50.0, value=25.0)
-dpf = st.sidebar.number_input("Diabetes Pedigree Function", min_value=0.0, max_value=2.5, value=0.5)
-age = st.sidebar.number_input("Age", min_value=0, max_value=120, value=30)
+    # Sidebar User Input
+    pregnancies = st.sidebar.number_input("Pregnancies", min_value=0, max_value=20, value=1)
+    glucose = st.sidebar.number_input("Glucose Level", min_value=0, max_value=200, value=100)
+    bp = st.sidebar.number_input("Blood Pressure", min_value=0, max_value=150, value=70)
+    skin = st.sidebar.number_input("Skin Thickness", min_value=0, max_value=100, value=20)
+    insulin = st.sidebar.number_input("Insulin Level", min_value=0, max_value=500, value=80)
+    bmi = st.sidebar.number_input("BMI", min_value=0.0, max_value=50.0, value=25.0)
+    dpf = st.sidebar.number_input("Diabetes Pedigree Function", min_value=0.0, max_value=2.5, value=0.5)
+    age = st.sidebar.number_input("Age", min_value=0, max_value=120, value=30)
 
-# Predict Button
-if st.sidebar.button("🔍 Predict Diabetes"):
-    input_data = np.array([[pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]])
-    input_scaled = scaler.transform(input_data)  # Apply the same scaling
-    prediction = model.predict(input_scaled)
-    result = "🛑 Positive" if prediction[0] == 1 else "✅ Negative"
-    st.markdown(f"## **Prediction: {result}**")
+    # Predict Button
+    if st.sidebar.button("🔍 Predict Diabetes"):
+        input_data = np.array([[pregnancies, glucose, bp, skin, insulin, bmi, dpf, age]])
+        input_scaled = scaler.transform(input_data.reshape(1, -1))  # Ensure proper reshaping
+        prediction = model.predict(input_scaled)
+        result = "🛑 Positive" if prediction[0] == 1 else "✅ Negative"
+        st.markdown(f"## **Prediction: {result}**")
