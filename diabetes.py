@@ -12,7 +12,8 @@ import seaborn as sns
 # Load dataset
 @st.cache_data
 def load_data():
-    return pd.read_csv(r"C:\Users\Data Professional\Desktop\diabetes\healthcare diabetes dataset.csv")
+    url = "https://raw.githubusercontent.com/paul/diabetesapp.py/main/healthcare diabetes dataset.csv"
+    return pd.read_csv(url)
 
 # Preprocess data
 def preprocess_data(df):
