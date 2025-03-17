@@ -55,7 +55,7 @@ st.markdown("# 🩺 Diabetes Prediction App")
 st.sidebar.header("🔢 Input Patient Details")
 
 # Load and preprocess data
-data = load_data(url)
+data = load_data()
 X, y, scaler, feature_names = preprocess_data(data)
 
 # Select Model
