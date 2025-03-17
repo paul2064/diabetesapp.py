@@ -12,7 +12,7 @@ import seaborn as sns
 # Load dataset
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/paul/diabetesapp.py/main/healthcare diabetes dataset.csv"
+    url = "https://raw.githubusercontent.com/paul/diabetesapp.py/main/diabetesdataset.csv"
     return pd.read_csv(url)
 
 # Preprocess data
